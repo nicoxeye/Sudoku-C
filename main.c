@@ -6,9 +6,7 @@
 
 // 1 - EASY, 2 - MODERATE, 3 - HARD, 4 - ADVANCED
 int difficulty = 0;
-// TODO: ADD HEARTS AND LIVES SYSTEM :D
-int hearts = 3;
-// 3X3, 4X4, 9X9, 16X16
+// 4X4, 9X9, 16X16
 int sizeOfTheBoard= 0;
 
 int ** board;
@@ -65,17 +63,16 @@ void boardSize() {
   while (1) {
     printf("======NEW GAME======\n");
     printf("CHOOSE SIZE OF THE BOARD\n");
-    printf("1] 3x3\n"); //temporary
-    printf("2] 4x4\n");
-    printf("3] 9x9\n");
-    printf("4] 16x16\n");
-    printf("5] GO BACK\n");
+    printf("1] 4x4\n");
+    printf("2] 9x9\n");
+    printf("3] 16x16\n");
+    printf("4] GO BACK\n");
     scanf("%d", &choice);
 
-    if (choice == 5) return;
+    if (choice == 4) return;
 
-    const int boardSizeOptions[] = {3, 4, 9, 16};
-    if (choice < 1 || choice > 4) {
+    const int boardSizeOptions[] = {4, 9, 16};
+    if (choice < 1 || choice > 3) {
       printf("CHOOSE A VALID OPTION\n");
       continue;
     }
@@ -213,20 +210,116 @@ bool fillRemaining(int **grid, const int i, const int j) {
 // TODO
 // remove K digits randomly
 void removeKDigits(int **grid, int k) {
+  while (k > 0) {
+    int cell = rand() % 81; //TODO: CHANGE THIS TO WORK WITH OTHER GRIDS
+
+    int i = cell / 9;
+    int j = cell % 9;
+
+    if (grid[i][j] != 0) {
+      grid[i][j] = 0;
+      k--;
+    }
+  }
 
 }
 
 
-int **sudokuGenerator(const int k) {
+// depending on the difficulty chosen in the menu
+// it converts that into a k amount of digits that will be removed
+// from the puzzle :)
+int difficultyToK(const int difficultyNumber) {
+  int k = 0;
+
+  //EASY
+  if (difficultyNumber == 1) {
+    k = 20;
+    return k;
+  }
+  //MODERATE
+  if (difficultyNumber == 2) {
+    k = 30;
+    return k;
+  }
+  //HARD
+  if (difficultyNumber == 3) {
+    k = 40;
+    return k;
+  }
+  //ADVANCED
+  if (difficultyNumber == 4) {
+    k = 50;
+    return k;
+  }
+  return -1;
+}
+
+
+int **sudokuGenerator() {
   int ** grid = initializeBoard(sizeOfTheBoard);
 
   fillDiagonal(grid);
   fillRemaining(grid, 0, 0);
-  // TODO
-  // removeKDigits(grid, k);
+  const int k = difficultyToK(difficulty);
+  removeKDigits(grid, k);
   return grid;
 }
 
+
+int hearts = 3;
+void insertValueToGrid(int **grid) {
+  int row, col, value;
+
+  printf("ENTER A ROW (0-%d): ", sizeOfTheBoard - 1);
+  scanf("%d", &row);
+
+  printf("ENTER A COLUMN (0-%d): ", sizeOfTheBoard - 1);
+  scanf("%d", &col);
+
+  printf("ENTER VALUE: ");
+  scanf("%d", &value);
+
+  // position validation
+  if (row < 0 || row >= sizeOfTheBoard || col < 0 || col >= sizeOfTheBoard) {
+    printf("INVALID POSITION!\n");
+    return;
+  }
+
+  // value validation
+  if (value < 1 || value > sizeOfTheBoard) {
+    printf("INVALID VALUE!\n");
+    return;
+  }
+
+  // so it has to be 0
+  if (grid[row][col] != 0) {
+    printf("CELL ALREADY FILLED!\n");
+    return;
+  }
+
+  if (checkIfSafe(grid, row, col, value)) {
+    // if it's safe to do so assign the value to the grid and print the board
+    grid[row][col] = value;
+    printBoard(sizeOfTheBoard);
+    printf("\nHEARTS: %d\n", hearts);
+  } else {
+    //if it's not -> -1 to hearts
+    hearts--;
+    printf("WRONG! HEARTS LEFT: %d\n", hearts);
+
+    //game over
+    if (hearts <= 0) {
+      printf("GAME OVER\n");
+      system("pause");
+      exit(0);
+    }
+  }
+}
+
+//TODO!!!
+void DeleteValueFromGrid(int **grid) {
+
+}
 
 
 void menu() {
@@ -270,8 +363,10 @@ void menu() {
 
         printBoard(sizeOfTheBoard);
 
-        printf("pause to debug\n\n");
-        scanf("%s");
+        int k = difficultyToK(difficulty);
+        for (int i = 0; i < k; i++) {
+          insertValueToGrid(board);
+        }
         break;
       case 3:
         printf("WILL ADD IT\n");
