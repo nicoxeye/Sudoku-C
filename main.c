@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <time.h>
 
 
 // 1 - EASY, 2 - MODERATE, 3 - HARD, 4 - ADVANCED
@@ -12,7 +13,7 @@ int sizeOfTheBoard= 0;
 int ** board;
 
 //TODO: IMPLEMENT THIS FOR 4X4 TO WORK ETC
-//boxSize = sqrt(sizeOfTheBoard);
+int boxSize; // 4x4 -> 2x2, 16x16 -> 4x4
 
 // dynamic memory allocation since the user can choose the size of the board
 int **initializeBoard(const int sizeOfTheBoard) {
@@ -44,7 +45,12 @@ int **initializeBoard(const int sizeOfTheBoard) {
 void printBoard(const int sizeOfTheBoard) {
   for (int i = 0; i < sizeOfTheBoard; i++) {
     for (int j = 0; j < sizeOfTheBoard; j++) {
-      printf("%2d ", board[i][j]);
+      if (board[i][j] == 0) {
+        printf(" . ");
+      }
+      else {
+        printf("%2d ", board[i][j]);
+      }
     }
     printf("\n");
   }
@@ -79,6 +85,7 @@ void boardSize() {
 
     sizeOfTheBoard = boardSizeOptions[choice-1];
     printf("SIZE CHOSEN: %d\n", sizeOfTheBoard);
+    boxSize = sqrt(sizeOfTheBoard); //assigning the boxSize value after choosing size
     break;
   }
 }
@@ -115,11 +122,10 @@ void gameDifficulty() {
 //SUDOKU FUNCTIONS
 
 // returns false if 3x3 box contains a number
-// TODO: if user places a number and it's false -> -1 heart
 bool unUsedInBox(int **grid, const int row, const int col, const int number) {
 
-  for (int i = 0; i < 3; i++) {
-    for (int j = 0; j < 3; j++) {
+  for (int i = 0; i < boxSize; i++) {
+    for (int j = 0; j < boxSize; j++) {
       if (grid[row + i][col + j] == number) {
         return false;
       }
@@ -132,10 +138,19 @@ bool unUsedInBox(int **grid, const int row, const int col, const int number) {
 //filling 3x3, random numbers to subgrid
 void fillBox(int **grid, const int row, const int col) {
   int number;
-  for (int i = 0; i < 3; i++) {
-    for (int j = 0; j < 3; j++) {
+  for (int i = 0; i < boxSize; i++) {
+    for (int j = 0; j < boxSize; j++) {
       do {
-        number = (rand() % 9) + 1;
+        if (boxSize == 3) {
+          number = (rand() % 9) + 1;
+        }
+        else if (boxSize == 2) {
+          number = (rand() % 4) + 1;
+        }
+        //TODO: 16X16
+        else if (boxSize == 4) {
+          number = (rand() % 16) + 1;
+        }
       } while (!unUsedInBox(grid, row, col, number));
 
       grid[row + i][col + j] = number;
@@ -146,7 +161,7 @@ void fillBox(int **grid, const int row, const int col) {
 
 //check if it's safe to put a number in row i
 bool unUsedInRow(int **grid, const int i, const int number) {
-  for (int j = 0; j < 9; j++) {
+  for (int j = 0; j < sizeOfTheBoard; j++) {
     if (grid[i][j] == number) {
       return false;
     }
@@ -156,7 +171,7 @@ bool unUsedInRow(int **grid, const int i, const int number) {
 
 //check if it's safe to put a number in column j
 bool unUsedInCol(int **grid, const int j, const int number) {
-  for (int i = 0; i < 9; i++) {
+  for (int i = 0; i < sizeOfTheBoard; i++) {
     if (grid[i][j] == number) {
       return false;
     }
@@ -168,25 +183,25 @@ bool unUsedInCol(int **grid, const int j, const int number) {
 // to put a number in the cell (i, j)
 // ensures that the number isn't used in: row, column, box
 bool checkIfSafe(int **grid, const int i, const int j, const int number) {
-  return (unUsedInRow(grid, i, number) && unUsedInCol(grid, j, number) && unUsedInBox(grid, i - i % 3, j - j % 3, number));
+  return (unUsedInRow(grid, i, number) && unUsedInCol(grid, j, number) && unUsedInBox(grid, i - i % boxSize, j - j % boxSize, number));
 }
 
 
 // simplifying the process ;)
 void fillDiagonal(int **grid) {
-  for (int i = 0; i < 9; i+= 3) {
+  for (int i = 0; i < sizeOfTheBoard; i+= boxSize) {
       fillBox(grid, i, i);
   }
 }
 
 bool fillRemaining(int **grid, const int i, const int j) {
   // end of grid
-  if (i == 9) {
+  if (i == sizeOfTheBoard) {
     return true;
   }
 
   // going to the next row if j=9
-  if (j == 9) {
+  if (j == sizeOfTheBoard) {
     return fillRemaining(grid, i+1, 0);
   }
 
@@ -195,7 +210,7 @@ bool fillRemaining(int **grid, const int i, const int j) {
     return fillRemaining(grid, i, j+1);
   }
 
-  for (int num = 1; num <= 9; num++) {
+  for (int num = 1; num <= sizeOfTheBoard; num++) {
     if (checkIfSafe(grid, i, j, num)) {
       grid[i][j] = num;
       if (fillRemaining(grid, i, j+1)) {
@@ -207,14 +222,13 @@ bool fillRemaining(int **grid, const int i, const int j) {
   return false;
 }
 
-// TODO
 // remove K digits randomly
 void removeKDigits(int **grid, int k) {
   while (k > 0) {
-    int cell = rand() % 81; //TODO: CHANGE THIS TO WORK WITH OTHER GRIDS
+    int cell = rand() % (sizeOfTheBoard * sizeOfTheBoard);
 
-    int i = cell / 9;
-    int j = cell % 9;
+    int i = cell / sizeOfTheBoard;
+    int j = cell % sizeOfTheBoard;
 
     if (grid[i][j] != 0) {
       grid[i][j] = 0;
@@ -228,30 +242,31 @@ void removeKDigits(int **grid, int k) {
 // depending on the difficulty chosen in the menu
 // it converts that into a k amount of digits that will be removed
 // from the puzzle :)
-int difficultyToK(const int difficultyNumber) {
-  int k = 0;
 
-  //EASY
-  if (difficultyNumber == 1) {
-    k = 20;
-    return k;
+//example: 9x9 = 81 cells, Hard = ~48 removed, 4x4 = 16 cells, Hard = ~10 cells removed
+int difficultyToK(const int difficultyNumber) {
+  const int totalCells = sizeOfTheBoard * sizeOfTheBoard;
+  float percent;
+
+  switch (difficultyNumber) {
+    case 1:
+      percent = 0.3f;
+      break; // easy
+    case 2:
+      percent = 0.5f;
+      break; // moderate
+    case 3:
+      percent = 0.6f;
+      break; // hard
+    case 4:
+      percent = 0.75f;
+      break; // advanced
+    default:
+      printf("INVALID DIFFICULTY\n");
+    exit(-1);
   }
-  //MODERATE
-  if (difficultyNumber == 2) {
-    k = 30;
-    return k;
-  }
-  //HARD
-  if (difficultyNumber == 3) {
-    k = 40;
-    return k;
-  }
-  //ADVANCED
-  if (difficultyNumber == 4) {
-    k = 50;
-    return k;
-  }
-  return -1;
+
+  return (int)(totalCells * percent);
 }
 
 
@@ -260,58 +275,82 @@ int **sudokuGenerator() {
 
   fillDiagonal(grid);
   fillRemaining(grid, 0, 0);
+
   const int k = difficultyToK(difficulty);
+
   removeKDigits(grid, k);
+
   return grid;
 }
 
 
+int countEmptyCells(int **grid) {
+  int count = 0;
+  for (int i = 0; i < sizeOfTheBoard; i++) {
+    for (int j = 0; j < sizeOfTheBoard; j++) {
+      if (grid[i][j] == 0) count++;
+    }
+  }
+  return count;
+}
+
+
+// "lives"
 int hearts = 3;
+// user types in a row. column and value
+// validates user info and assigns the value if correct
+// otherwise takes a heart and informs of the error
+int correctMoves;
+
 void insertValueToGrid(int **grid) {
-  int row, col, value;
+  const int totalToFill = countEmptyCells(grid);
+  while (correctMoves < totalToFill & hearts > 0) {
+    int row, col, value;
 
-  printf("ENTER A ROW (0-%d): ", sizeOfTheBoard - 1);
-  scanf("%d", &row);
+    printf("ENTER A ROW (0-%d): ", sizeOfTheBoard - 1);
+    scanf("%d", &row);
 
-  printf("ENTER A COLUMN (0-%d): ", sizeOfTheBoard - 1);
-  scanf("%d", &col);
+    printf("ENTER A COLUMN (0-%d): ", sizeOfTheBoard - 1);
+    scanf("%d", &col);
 
-  printf("ENTER VALUE: ");
-  scanf("%d", &value);
+    printf("ENTER VALUE: ");
+    scanf("%d", &value);
 
-  // position validation
-  if (row < 0 || row >= sizeOfTheBoard || col < 0 || col >= sizeOfTheBoard) {
-    printf("INVALID POSITION!\n");
-    return;
-  }
+    // position validation
+    if (row < 0 || row >= sizeOfTheBoard || col < 0 || col >= sizeOfTheBoard) {
+      printf("INVALID POSITION!\n");
+      continue;
+    }
 
-  // value validation
-  if (value < 1 || value > sizeOfTheBoard) {
-    printf("INVALID VALUE!\n");
-    return;
-  }
+    // value validation
+    if (value < 1 || value > sizeOfTheBoard) {
+      printf("INVALID VALUE!\n");
+      continue;
+    }
 
-  // so it has to be 0
-  if (grid[row][col] != 0) {
-    printf("CELL ALREADY FILLED!\n");
-    return;
-  }
+    // so it has to be 0
+    if (grid[row][col] != 0) {
+      printf("CELL ALREADY FILLED!\n");
+      continue;
+    }
 
-  if (checkIfSafe(grid, row, col, value)) {
-    // if it's safe to do so assign the value to the grid and print the board
-    grid[row][col] = value;
-    printBoard(sizeOfTheBoard);
-    printf("\nHEARTS: %d\n", hearts);
-  } else {
-    //if it's not -> -1 to hearts
-    hearts--;
-    printf("WRONG! HEARTS LEFT: %d\n", hearts);
+    if (checkIfSafe(grid, row, col, value)) {
+      // if it's safe to do so assign the value to the grid and print the board
+      grid[row][col] = value;
+      correctMoves++;
+      printBoard(sizeOfTheBoard);
+      printf("\nHEARTS: %d | REMAINING SPOTS: %d\n", hearts, totalToFill - correctMoves);
+    } else {
+      //if it's not -> -1 to hearts
+      hearts--;
+      printf("WRONG! HEARTS LEFT: %d\n", hearts);
 
-    //game over
-    if (hearts <= 0) {
-      printf("GAME OVER\n");
-      system("pause");
-      exit(0);
+      //game over
+      if (hearts <= 0) {
+        printf("GAME OVER\n");
+        system("pause");
+        exit(0);
+      }
     }
   }
 }
@@ -323,9 +362,8 @@ void DeleteValueFromGrid(int **grid) {
 
 
 void menu() {
-  int x = 1;
   int choice = 0;
-  while (x == 1) {
+  while (1) {
     printf("======MENU======\n");
     printf("1] TUTORIAL*\n");
     printf("2] NEW GAME\n");
@@ -346,28 +384,32 @@ void menu() {
         printf("  3. Each number can only appear once in each row, column, and nonet.\n");
         printf("  4. A Sudoku puzzle will have some numbers pre-filled in the grid, providing a starting point. \n\n\n");
 
-        getchar();
-        printf("Press Enter to continue...");
-        getchar();
+        system("pause");
         break;
       case 2:
+        correctMoves = 0;
+        hearts = 3;
+
         boardSize();
 
-        if (sizeOfTheBoard == 0) break;  // go back to menu
+        if (sizeOfTheBoard == 0) break;  // if something went wrong with choosing size go -> back to menu
 
         gameDifficulty();
 
-        if (difficulty == 0) break; // go back to menu
+        if (difficulty == 0) break; // the same
 
-        board = sudokuGenerator(5);
+        // changes the “seed” or the starting point of the algorithm. A seed is an integer used to initialize the random number generator.
+        // ensure a different sequence of random numbers; ergo a different sudoku puzzle every time
+        srand(time(0));
+        board = sudokuGenerator();
 
         printBoard(sizeOfTheBoard);
 
-        int k = difficultyToK(difficulty);
-        for (int i = 0; i < k; i++) {
-          insertValueToGrid(board);
-        }
-        break;
+        insertValueToGrid(board);
+
+        printf("GAME WON!\n");
+        system("pause");
+        exit(0);
       case 3:
         printf("WILL ADD IT\n");
         break;
