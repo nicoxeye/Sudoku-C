@@ -4,18 +4,17 @@
 #include <stdbool.h>
 #include <time.h>
 
-
 // 1 - EASY, 2 - MODERATE, 3 - HARD, 4 - ADVANCED
 int difficulty = 0;
 // 4X4, 9X9, 16X16
 int sizeOfTheBoard= 0;
-
 int ** board;
-
 int boxSize; // 4x4 -> 2x2, 16x16 -> 4x4
+void menu(); // prototype to let teh compiler know that a function like this exists
+void saveGameToFile(int ** grid);
 
 // dynamic memory allocation since the user can choose the size of the board
-int **initializeBoard(const int sizeOfTheBoard) {
+int **initializeBoard() {
   int ** newBoard = (int **)malloc(sizeOfTheBoard * sizeof(int *));
 
   if (newBoard == NULL) {
@@ -41,7 +40,7 @@ int **initializeBoard(const int sizeOfTheBoard) {
 
 
 // printing the board!
-void printBoard(const int sizeOfTheBoard) {
+void printBoard() {
   for (int i = 0; i < sizeOfTheBoard; i++) {
     for (int j = 0; j < sizeOfTheBoard; j++) {
       if (board[i][j] == 0) {
@@ -53,13 +52,6 @@ void printBoard(const int sizeOfTheBoard) {
         printf(" %c ", 'A' + (board[i][j] - 10));
       }
     }
-    printf("\n");
-  }
-}
-
-// pause to imitate terminal clear since nothing worked for me to do it differentlyT-T
-void pause() {
-  for (int i = 0; i < 100; i++) {
     printf("\n");
   }
 }
@@ -120,8 +112,8 @@ void gameDifficulty() {
   }
 }
 
-//SUDOKU FUNCTIONS
 
+//SUDOKU FUNCTIONS
 // returns false if 3x3 box contains a number
 bool unUsedInBox(int **grid, const int row, const int col, const int number) {
 
@@ -169,6 +161,7 @@ bool unUsedInRow(int **grid, const int i, const int number) {
   return true;
 }
 
+
 //check if it's safe to put a number in column j
 bool unUsedInCol(int **grid, const int j, const int number) {
   for (int i = 0; i < sizeOfTheBoard; i++) {
@@ -178,6 +171,7 @@ bool unUsedInCol(int **grid, const int j, const int number) {
   }
   return true;
 }
+
 
 // combines all the previous functions to return a bool whether it's safe
 // to put a number in the cell (i, j)
@@ -193,6 +187,7 @@ void fillDiagonal(int **grid) {
       fillBox(grid, i, i);
   }
 }
+
 
 bool fillRemaining(int **grid, const int i, const int j) {
   // end of grid
@@ -226,10 +221,10 @@ bool fillRemaining(int **grid, const int i, const int j) {
 // remove K digits randomly
 void removeKDigits(int **grid, int k) {
   while (k > 0) {
-    int cell = rand() % (sizeOfTheBoard * sizeOfTheBoard);
+    const int cell = rand() % (sizeOfTheBoard * sizeOfTheBoard);
 
-    int i = cell / sizeOfTheBoard;
-    int j = cell % sizeOfTheBoard;
+    const int i = cell / sizeOfTheBoard;
+    const int j = cell % sizeOfTheBoard;
 
     if (grid[i][j] != 0) {
       grid[i][j] = 0;
@@ -244,8 +239,6 @@ void removeKDigits(int **grid, int k) {
 // it converts that into a k amount of digits that will be removed
 // from the puzzle :)
 // (how much percent of the board will be taken away)
-
-//example: 9x9 = 81 cells, Hard = ~48 removed, 4x4 = 16 cells, Hard = ~10 cells removed
 int difficultyToK(const int difficultyNumber) {
   const int totalCells = sizeOfTheBoard * sizeOfTheBoard;
   float percent;
@@ -258,10 +251,10 @@ int difficultyToK(const int difficultyNumber) {
       percent = 0.4f;
       break; // moderate
     case 3:
-      percent = 0.6f;
+      percent = 0.5f;
       break; // hard
     case 4:
-      percent = 0.7f;
+      percent = 0.6f;
       break; // advanced
     default:
       printf("INVALID DIFFICULTY\n");
@@ -273,7 +266,7 @@ int difficultyToK(const int difficultyNumber) {
 
 
 int **sudokuGenerator() {
-  int ** grid = initializeBoard(sizeOfTheBoard);
+  int ** grid = initializeBoard();
 
   fillDiagonal(grid);
   fillRemaining(grid, 0, 0);
@@ -286,7 +279,7 @@ int **sudokuGenerator() {
 }
 
 
-// empty spots to fill
+// empty spots to fill on the board
 int countEmptyCells(int **grid) {
   int count = 0;
   for (int i = 0; i < sizeOfTheBoard; i++) {
@@ -298,21 +291,61 @@ int countEmptyCells(int **grid) {
 }
 
 
+void pauseMenu(int **grid) {
+  int choice;
+  while (1) {
+    printf("\n===== PAUSE MENU =====\n");
+    printf("1] Save Game\n");
+    printf("2] Return to Main Menu\n");
+    printf("3] Continue Game\n");
+    printf("4] Exit\n");
+    printf("======================\n");
+    scanf("%d", &choice);
+
+    switch (choice) {
+      case 1:
+        saveGameToFile(grid);
+        break;
+      case 2:
+        printf("RETURNING TO MAIN MENU...\n");
+        menu();
+        break;
+      case 3:
+        printBoard();
+        printf("RESUMING GAME...\n");
+        return;
+      case 4:
+        exit(0);
+      default:
+        printf("INVALID CHOICE\n");
+    }
+  }
+}
+
+
 // "lives"
 int hearts = 3;
+int correctMoves;
+
 // user types in a row. column and value
 // validates user info and assigns the value if correct
 // otherwise takes a heart and informs of the error
-int correctMoves;
-
 void insertValueToGrid(int **grid) {
   const int totalToFill = countEmptyCells(grid);
 
   while (correctMoves < totalToFill & hearts > 0) {
     int row, col, value;
 
-    printf("ENTER A ROW (1-%d): ", sizeOfTheBoard);
-    scanf("%d", &row);
+    char input2[1];
+    printf("ENTER A ROW (1-%d) OR 'p' TO PAUSE: ", sizeOfTheBoard);
+    scanf("%s", input2);
+
+    if (input2[0] == 'p' || input2[0] == 'P') {
+      pauseMenu(grid);
+      continue;
+    }
+
+    row = atoi(input2); // atoi() - ASCII to Integer
     row--; // adjusting to 0-based indexing
 
     printf("ENTER A COLUMN (1-%d): ", sizeOfTheBoard);
@@ -322,24 +355,20 @@ void insertValueToGrid(int **grid) {
     if (sizeOfTheBoard == 4) {
       printf("ENTER VALUE (1-4): ");
       scanf("%d", &value);
-
-    // value validation
-    if (value < 1 || value > sizeOfTheBoard) {
-        printf("INVALID VALUE!\n");
-        continue;
-      }
-
+      // value validation
+      if (value < 1 || value > sizeOfTheBoard) {
+          printf("INVALID VALUE!\n");
+          continue;
+        }
     }
     else if (sizeOfTheBoard == 9) {
       printf("ENTER VALUE (1-9): ");
       scanf("%d", &value);
-
-    // value validation
-    if (value < 1 || value > sizeOfTheBoard) {
-        printf("INVALID VALUE!\n");
-        continue;
+      // value validation
+      if (value < 1 || value > sizeOfTheBoard) {
+          printf("INVALID VALUE!\n");
+          continue;
       }
-
     }
     else if (sizeOfTheBoard == 16) {
       char input[1];
@@ -376,7 +405,7 @@ void insertValueToGrid(int **grid) {
       // if it's safe to do so assign the value to the grid and print the board
       grid[row][col] = value;
       correctMoves++;
-      printBoard(sizeOfTheBoard);
+      printBoard();
       printf("\nHEARTS: %d | REMAINING SPOTS: %d\n", hearts, totalToFill - correctMoves);
     } else {
       //if it's not -> -1 to hearts
@@ -394,9 +423,62 @@ void insertValueToGrid(int **grid) {
 }
 
 //TODO!!!
-void DeleteValueFromGrid(int **grid) {
+void deleteValueFromGrid(int **grid) {
 
 }
+
+
+// saving array to file to be able to continue a game
+void saveGameToFile(int **grid) {
+  FILE *f = fopen("game.data", "wb");
+
+  if (!f) {
+    printf("ERROR OPENING THE FILE\n");
+    return;
+  }
+
+  // saving game metadata
+  fwrite(&sizeOfTheBoard, sizeof(int), 1, f);
+  fwrite(&difficulty, sizeof(int), 1, f);
+  fwrite(&hearts, sizeof(int), 1, f);
+  fwrite(&correctMoves, sizeof(int), 1, f);
+
+  // writing row by row
+  for (int i = 0; i < sizeOfTheBoard; i++) {
+    fwrite(grid[i], sizeof(int), sizeOfTheBoard, f);
+  }
+
+  fclose(f);
+  printf("GAME SAVED SUCCESSFULLY\n");
+}
+
+
+// loading a saved game
+int **loadGameFromFile() {
+  FILE *f = fopen("game.data", "rb");
+
+  if (!f) {
+    printf("ERROR OPENING THE FILE\n");
+    return NULL;
+  }
+
+  // reading game metadata
+  fread(&sizeOfTheBoard, sizeof(int), 1, f);
+  fread(&difficulty, sizeof(int), 1, f);
+  fread(&hearts, sizeof(int), 1, f);
+  fread(&correctMoves, sizeof(int), 1, f);
+  boxSize = sqrt(sizeOfTheBoard); // updating box size
+
+  int **grid = initializeBoard(); // initializing the board with 0s
+
+  for (int i = 0; i < sizeOfTheBoard; i++) {
+    fread(grid[i], sizeof(int), sizeOfTheBoard, f); //writing the data to the board
+  }
+
+  fclose(f);
+  return grid;
+}
+
 
 //functions to calculate time of the game :)
 time_t start, end;
@@ -420,11 +502,10 @@ void menu() {
   int choice = 0;
   while (1) {
     printf("======MENU======\n");
-    printf("1] TUTORIAL*\n");
-    printf("2] NEW GAME\n");
-    printf("3] CONTINUE\n");
-    printf("4] SEE PREVIOUS GAMES\n");
-    printf("5] EXIT\n");
+    printf("1] Tutorial\n");
+    printf("2] New Game\n");
+    printf("3] Continue\n");
+    printf("4] Exit\n");
 
     scanf("%d", &choice);
 
@@ -473,12 +554,21 @@ void menu() {
         system("pause");
         exit(0);
       case 3:
-        printf("WILL ADD IT\n");
+        board = loadGameFromFile();
+        if (board != NULL) {
+          printBoard(sizeOfTheBoard);
+          startTime();
+          insertValueToGrid(board);
+
+          printf("\n");
+          endTime();
+          printf("\nGAME WON!\n\n");
+          calculateTimeElapsed();
+          system("pause");
+          exit(0);
+        }
         break;
       case 4:
-        printf("WILL ADD IT\n");
-        break;
-      case 5:
         printf("CLOSING APP...\n");
         exit(0);
       default:
@@ -487,6 +577,7 @@ void menu() {
 
   }
 }
+
 
 
 int main(){
