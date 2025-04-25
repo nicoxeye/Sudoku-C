@@ -422,11 +422,6 @@ void insertValueToGrid(int **grid) {
   }
 }
 
-//TODO!!!
-void deleteValueFromGrid(int **grid) {
-
-}
-
 
 // saving array to file to be able to continue a game
 void saveGameToFile(int **grid) {
