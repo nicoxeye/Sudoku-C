@@ -3,33 +3,43 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <time.h>
+#include "util.h"
 
-int difficulty = 0;
-int sizeOfTheBoard= 0;
-int ** board;
-int boxSize; // sqrt(sizeOfTheBoard)
+
 void menu(); // prototype to let the compiler know that a function like this exists
 void saveGameToFile(int ** grid);
 
 
+typedef struct {
+  int sizeOfTheBoard;
+  int boxSize;
+  int **board;
+  int hearts;
+  int correctMoves;
+  int difficulty;
+} GameState;
+
+GameState gameState;
+
+
 // dynamic memory allocation since the user can choose the size of the board
 int **initializeBoard() {
-  int ** newBoard = (int **)malloc(sizeOfTheBoard * sizeof(int *));
+  int ** newBoard = (int **)malloc(gameState.sizeOfTheBoard * sizeof(int *));
 
   if (newBoard == NULL) {
     perror("FAILED TO ALLOCATE BOARD ROWS");
     exit(EXIT_FAILURE);
   }
 
-  for (int i = 0; i < sizeOfTheBoard; i++) {
-    newBoard[i] = (int *)malloc(sizeOfTheBoard * sizeof(int));
+  for (int i = 0; i < gameState.sizeOfTheBoard; i++) {
+    newBoard[i] = (int *)malloc(gameState.sizeOfTheBoard * sizeof(int));
 
     if (newBoard[i] == NULL) {
       perror("FAILED TO ALLOCATE BOARD COLUMNS");
       exit(EXIT_FAILURE);
     }
 
-    for (int j = 0; j < sizeOfTheBoard; j++) {
+    for (int j = 0; j < gameState.sizeOfTheBoard; j++) {
       newBoard[i][j] = 0;
     }
 
@@ -38,21 +48,32 @@ int **initializeBoard() {
 }
 
 
+void freeBoard(){
+  if (gameState.board != NULL) {
+    for (int i = 0; i < gameState.sizeOfTheBoard; i++) {
+      free(gameState.board[i]);
+    }
+    free(gameState.board);
+    gameState.board = NULL; 
+  }
+}
+
+
 // printing the board
 void printBoard() {
 
-  for (int i = 0; i < sizeOfTheBoard; i++) {
-    for (int j = 0; j < sizeOfTheBoard; j++) {
+  for (int i = 0; i < gameState.sizeOfTheBoard; i++) {
+    for (int j = 0; j < gameState.sizeOfTheBoard; j++) {
 
-      if (board[i][j] == 0) {
+      if (gameState.board[i][j] == 0) {
         printf(" . ");
       } 
-      else if (board[i][j] <= 9) {
-        printf("%2d ", board[i][j]);
+      else if (gameState.board[i][j] <= 9) {
+        printf("%2d ", gameState.board[i][j]);
       } 
       else {
         // it will replace 10-16 with a char of A-F
-        printf(" %c ", 'A' + (board[i][j] - 10));
+        printf(" %c ", 'A' + (gameState.board[i][j] - 10));
       }
     }
     printf("\n");
@@ -70,7 +91,12 @@ void boardSize() {
     printf("2] 9x9\n");
     printf("3] 16x16\n");
     printf("4] GO BACK\n");
-    scanf("%d", &choice);
+
+    if (scanf("%d", &choice) != 1) {
+      printf("INVALID INPUT.\n");
+      while (getchar() != '\n'); // flush input
+      continue;
+    }
 
     if (choice == 4) return;
 
@@ -80,9 +106,9 @@ void boardSize() {
       continue;
     }
 
-    sizeOfTheBoard = boardSizeOptions[choice-1];
-    printf("SIZE CHOSEN: %d\n", sizeOfTheBoard);
-    boxSize = sqrt(sizeOfTheBoard); // assigning the boxSize value after choosing size
+    gameState.sizeOfTheBoard = boardSizeOptions[choice-1];
+    printf("SIZE CHOSEN: %d\n", gameState.sizeOfTheBoard);
+    gameState.boxSize = sqrt(gameState.sizeOfTheBoard); // assigning the boxSize value after choosing size
     break;
   }
 }
@@ -100,7 +126,11 @@ void gameDifficulty() {
     printf("4] ADVANCED\n");
     printf("5] GO BACK\n");
 
-    scanf("%d", &choice);
+    if (scanf("%d", &choice) != 1) {
+      printf("INVALID INPUT.\n");
+      while (getchar() != '\n'); // flush input
+      continue;
+    }
 
     if (choice == 5) return;
 
@@ -111,8 +141,8 @@ void gameDifficulty() {
       continue;
     }
 
-    difficulty = difficultyOptions[choice-1];
-    printf("DIFFICULTY CHOSEN: %d\n", difficulty);
+    gameState.difficulty = difficultyOptions[choice-1];
+    printf("DIFFICULTY CHOSEN: %d\n", gameState.difficulty);
     break;
   }
 }
@@ -122,8 +152,8 @@ void gameDifficulty() {
 // returns false if 3x3 box contains a number
 bool unUsedInBox(int **grid, const int row, const int col, const int number) {
 
-  for (int i = 0; i < boxSize; i++) {
-    for (int j = 0; j < boxSize; j++) {
+  for (int i = 0; i < gameState.boxSize; i++) {
+    for (int j = 0; j < gameState.boxSize; j++) {
       if (grid[row + i][col + j] == number) {
         return false;
       }
@@ -136,16 +166,16 @@ bool unUsedInBox(int **grid, const int row, const int col, const int number) {
 // filling 3x3, random numbers to subgrid
 void fillBox(int **grid, const int row, const int col) {
   int number;
-  for (int i = 0; i < boxSize; i++) {
-    for (int j = 0; j < boxSize; j++) {
+  for (int i = 0; i < gameState.boxSize; i++) {
+    for (int j = 0; j < gameState.boxSize; j++) {
       do {
-        if (boxSize == 3) {
+        if (gameState.boxSize == 3) {
           number = (rand() % 9) + 1;
         }
-        else if (boxSize == 2) {
+        else if (gameState.boxSize == 2) {
           number = (rand() % 4) + 1;
         }
-        else if (boxSize == 4) {
+        else if (gameState.boxSize == 4) {
           number = (rand() % 16) + 1;
         }
       } while (!unUsedInBox(grid, row, col, number));
@@ -158,7 +188,7 @@ void fillBox(int **grid, const int row, const int col) {
 
 // check if it's safe to put a number in row i
 bool unUsedInRow(int **grid, const int i, const int number) {
-  for (int j = 0; j < sizeOfTheBoard; j++) {
+  for (int j = 0; j < gameState.sizeOfTheBoard; j++) {
     if (grid[i][j] == number) {
       return false;
     }
@@ -169,7 +199,7 @@ bool unUsedInRow(int **grid, const int i, const int number) {
 
 // check if it's safe to put a number in column j
 bool unUsedInCol(int **grid, const int j, const int number) {
-  for (int i = 0; i < sizeOfTheBoard; i++) {
+  for (int i = 0; i < gameState.sizeOfTheBoard; i++) {
     if (grid[i][j] == number) {
       return false;
     }
@@ -181,27 +211,27 @@ bool unUsedInCol(int **grid, const int j, const int number) {
 // combines all the previous functions to return a bool whether it's safe to put a number in the cell (i, j)
 // ensures that the number isn't used in: row, column, box
 bool checkIfSafe(int **grid, const int i, const int j, const int number) {
-  return (unUsedInRow(grid, i, number) && unUsedInCol(grid, j, number) && unUsedInBox(grid, i - i % boxSize, j - j % boxSize, number));
+  return (unUsedInRow(grid, i, number) && unUsedInCol(grid, j, number) && unUsedInBox(grid, i - i % gameState.boxSize, j - j % gameState.boxSize, number));
 }
 
 
-// filling the diagonal of the board
+// filling the diagonal
 void fillDiagonal(int **grid) {
-  for (int i = 0; i < sizeOfTheBoard; i+= boxSize) {
+  for (int i = 0; i < gameState.sizeOfTheBoard; i+= gameState.boxSize) {
       fillBox(grid, i, i);
   }
 }
 
 
-// filling the rest of the board
+// filling the rest with the board
 bool fillRemaining(int **grid, const int i, const int j) {
   // if end of grid
-  if (i == sizeOfTheBoard) {
+  if (i == gameState.sizeOfTheBoard) {
     return true;
   }
 
-  // going to the next row if j=9
-  if (j == sizeOfTheBoard) {
+  // going to the next row if j == sizeOfTheBoard
+  if (j == gameState.sizeOfTheBoard) {
     return fillRemaining(grid, i+1, 0);
   }
 
@@ -210,7 +240,7 @@ bool fillRemaining(int **grid, const int i, const int j) {
     return fillRemaining(grid, i, j+1);
   }
 
-  for (int num = 1; num <= sizeOfTheBoard; num++) {
+  for (int num = 1; num <= gameState.sizeOfTheBoard; num++) {
     if (checkIfSafe(grid, i, j, num)) {
       grid[i][j] = num;
       if (fillRemaining(grid, i, j+1)) {
@@ -224,48 +254,45 @@ bool fillRemaining(int **grid, const int i, const int j) {
 
 
 // remove K digits randomly
-void removeKDigits(int **grid, int k) {
-  while (k > 0) {
-    const int cell = rand() % (sizeOfTheBoard * sizeOfTheBoard);
+void removeCells(int **grid) {
 
-    const int i = cell / sizeOfTheBoard;
-    const int j = cell % sizeOfTheBoard;
+  int total_cells = gameState.sizeOfTheBoard * gameState.sizeOfTheBoard;
+  int cells_to_remove;
+
+  switch (gameState.difficulty) {
+    case 1:      // EASY
+        cells_to_remove = total_cells * 20 / 100;
+        break;
+    case 2:      // MODERATE
+        cells_to_remove = total_cells * 35 / 100;
+        break;
+    case 3:      // HARD
+        cells_to_remove = total_cells * 50 / 100;
+        break;
+    case 4:      // ADVANCED
+        if (gameState.sizeOfTheBoard == 4) {
+            cells_to_remove = total_cells * 60 / 100;
+        } else {
+            cells_to_remove = total_cells * 70 / 100;
+        }
+        break;
+    default:
+        cells_to_remove = total_cells * 30 / 100; // Default EASY
+        break;
+  }
+
+  while (cells_to_remove > 0) {
+    const int cell = rand() % (gameState.sizeOfTheBoard * gameState.sizeOfTheBoard);
+
+    const int i = cell / gameState.sizeOfTheBoard;
+    const int j = cell % gameState.sizeOfTheBoard;
 
     if (grid[i][j] != 0) {
       grid[i][j] = 0;
-      k--;
+      cells_to_remove--;
     }
   }
 
-}
-
-
-// depending on the difficulty chosen in the menu
-// it converts that into a k amount of digits that will be removed from the puzzle :)
-// (how much percent of the board will be taken away)
-int difficultyToK(const int difficultyNumber) {
-  const int totalCells = sizeOfTheBoard * sizeOfTheBoard;
-  float percent;
-
-  switch (difficultyNumber) {
-    case 1:
-      percent = 0.3f;
-      break; // easy
-    case 2:
-      percent = 0.4f;
-      break; // moderate
-    case 3:
-      percent = 0.5f;
-      break; // hard
-    case 4:
-      percent = 0.6f;
-      break; // advanced
-    default:
-      printf("INVALID DIFFICULTY\n");
-      exit(-1);
-  }
-
-  return (int)(totalCells * percent);
 }
 
 
@@ -276,9 +303,7 @@ int **sudokuGenerator() {
   fillDiagonal(grid);
   fillRemaining(grid, 0, 0);
 
-  const int k = difficultyToK(difficulty);
-
-  removeKDigits(grid, k);
+  removeCells(grid);
 
   return grid;
 }
@@ -287,8 +312,8 @@ int **sudokuGenerator() {
 // empty spots to fill on the board -> spots that the user will have to fill
 int countEmptyCells(int **grid) {
   int count = 0;
-  for (int i = 0; i < sizeOfTheBoard; i++) {
-    for (int j = 0; j < sizeOfTheBoard; j++) {
+  for (int i = 0; i < gameState.sizeOfTheBoard; i++) {
+    for (int j = 0; j < gameState.sizeOfTheBoard; j++) {
       if (grid[i][j] == 0) count++;
     }
   }
@@ -302,25 +327,26 @@ void pauseMenu(int **grid) {
   while (1) {
     printf("\n===== PAUSE MENU =====\n");
     printf("1] Save Game\n");
-    printf("2] Return to Main Menu\n");
-    printf("3] Continue Game\n");
-    printf("4] Exit\n");
+    printf("2] Continue Game\n");
+    printf("3] Exit\n");
     printf("======================\n");
-    scanf("%d", &choice);
+    if (scanf("%d", &choice) != 1) {
+      printf("INVALID INPUT.\n");
+      while (getchar() != '\n'); // flush input
+      continue;
+    }
+
 
     switch (choice) {
       case 1:
         saveGameToFile(grid);
         break;
       case 2:
-        printf("RETURNING TO MAIN MENU...\n");
-        menu();
-        break;
-      case 3:
         printBoard();
         printf("RESUMING GAME...\n");
         return;
-      case 4:
+      case 3:
+        freeBoard();
         exit(0);
       default:
         printf("INVALID CHOICE\n");
@@ -330,20 +356,20 @@ void pauseMenu(int **grid) {
 }
 
 
-int hearts; // "lives"
-int correctMoves;
+//int hearts; // "lives"
+//int correctMoves;
 
 // user types in a row. column and value
 // validates user info and assigns the value if correct
 // otherwise takes a heart and informs of the error made
-void insertValueToGrid(int **grid) {
+void makeMove(int **grid) {
   const int totalToFill = countEmptyCells(grid);
 
-  while (correctMoves < totalToFill & hearts > 0) {
+  while (gameState.correctMoves < totalToFill && gameState.hearts > 0) {
     int row, col, value;
 
-    char input2[1];
-    printf("ENTER A ROW (1-%d) OR 'p' TO PAUSE: ", sizeOfTheBoard);
+    char input2[10];
+    printf("ENTER A ROW (1-%d) OR 'p' TO PAUSE: ", gameState.sizeOfTheBoard);
     scanf("%s", input2);
 
     if (input2[0] == 'p' || input2[0] == 'P') {
@@ -354,38 +380,45 @@ void insertValueToGrid(int **grid) {
     row = atoi(input2); // atoi() - ASCII to Integer
     row--; // adjusting to 0-based indexing
 
-    printf("ENTER A COLUMN (1-%d): ", sizeOfTheBoard);
-    scanf("%d", &col);
+    printf("ENTER A COLUMN (1-%d): ", gameState.sizeOfTheBoard);
+
+    if (scanf("%d", &col) != 1) {
+      printf("INVALID INPUT.\n");
+      while (getchar() != '\n'); // flush input
+      continue;
+    }
+
     col--;
 
-    if (sizeOfTheBoard == 4) {
+    if (gameState.sizeOfTheBoard == 4) {
       printf("ENTER VALUE (1-4): ");
       scanf("%d", &value);
+
       // value validation
-      if (value < 1 || value > sizeOfTheBoard) {
+      if (value < 1 || value > gameState.sizeOfTheBoard) {
           printf("INVALID VALUE!\n");
           continue;
         }
     }
-    else if (sizeOfTheBoard == 9) {
+    else if (gameState.sizeOfTheBoard == 9) {
       printf("ENTER VALUE (1-9): ");
       scanf("%d", &value);
       // value validation
-      if (value < 1 || value > sizeOfTheBoard) {
+      if (value < 1 || value > gameState.sizeOfTheBoard) {
           printf("INVALID VALUE!\n");
           continue;
       }
     }
-    else if (sizeOfTheBoard == 16) {
-      char input[1];
+    else if (gameState.sizeOfTheBoard == 16) {
+      char input[10];
       printf("ENTER VALUE (1-9) OR (A-F): ");
       scanf("%s", input);
 
       if (input[0] >= '1' && input[0] <= '9') {
         value = input[0] - '0';
-      } else if (input[0] >= 'A' && input[0] <= 'G') {
+      } else if (input[0] >= 'A' && input[0] <= 'F') {
         value = 10 + (input[0] - 'A');
-      } else if (input[0] >= 'a' && input[0] <= 'g') {
+      } else if (input[0] >= 'a' && input[0] <= 'f') {
         value = 10 + (input[0] - 'a');
       } else {
         printf("INVALID INPUT!\n");
@@ -395,7 +428,7 @@ void insertValueToGrid(int **grid) {
 
 
     // position validation
-    if (row < 0 || row >= sizeOfTheBoard || col < 0 || col >= sizeOfTheBoard) {
+    if (row < 0 || row >= gameState.sizeOfTheBoard || col < 0 || col >= gameState.sizeOfTheBoard) {
       printf("INVALID POSITION!\n");
       continue;
     }
@@ -409,21 +442,28 @@ void insertValueToGrid(int **grid) {
     if (checkIfSafe(grid, row, col, value)) {
       // if it's safe to do so assign the value to the grid and print the board
       grid[row][col] = value;
-      correctMoves++;
+      gameState.correctMoves++;
       printBoard();
-      printf("\nHEARTS: %d | REMAINING SPOTS: %d\n", hearts, totalToFill - correctMoves);
+      printf("\nHEARTS: %d | REMAINING SPOTS: %d\n", gameState.hearts, totalToFill - gameState.correctMoves);
     } else {
       //if it's not -> -1 to hearts
-      hearts--;
-      printf("WRONG! HEARTS LEFT: %d\n", hearts);
+      gameState.hearts--;
+      printf("WRONG! HEARTS LEFT: %d\n", gameState.hearts);
 
       //game over
-      if (hearts <= 0) {
+      if (gameState.hearts <= 0) {
         printf("GAME OVER\n");
         system("pause");
-        menu();
+        return;
       }
     }
+
+    // winning the game
+    if (gameState.correctMoves == totalToFill){
+      printf("GAME WON!\n");
+      return;
+    }
+
   }
 }
 
@@ -438,14 +478,14 @@ void saveGameToFile(int **grid) {
   }
 
   // saving game metadata
-  fwrite(&sizeOfTheBoard, sizeof(int), 1, f);
-  fwrite(&difficulty, sizeof(int), 1, f);
-  fwrite(&hearts, sizeof(int), 1, f);
-  fwrite(&correctMoves, sizeof(int), 1, f);
+  fwrite(&gameState.sizeOfTheBoard, sizeof(int), 1, f);
+  fwrite(&gameState.difficulty, sizeof(int), 1, f);
+  fwrite(&gameState.hearts, sizeof(int), 1, f);
+  fwrite(&gameState.correctMoves, sizeof(int), 1, f);
 
   // writing the board row by row
-  for (int i = 0; i < sizeOfTheBoard; i++) {
-    fwrite(grid[i], sizeof(int), sizeOfTheBoard, f);
+  for (int i = 0; i < gameState.sizeOfTheBoard; i++) {
+    fwrite(grid[i], sizeof(int), gameState.sizeOfTheBoard, f);
   }
 
   fclose(f);
@@ -463,50 +503,20 @@ int **loadGameFromFile() {
   }
 
   // reading game metadata
-  fread(&sizeOfTheBoard, sizeof(int), 1, f);
-  fread(&difficulty, sizeof(int), 1, f);
-  fread(&hearts, sizeof(int), 1, f);
-  fread(&correctMoves, sizeof(int), 1, f);
-  boxSize = sqrt(sizeOfTheBoard); // updating box size
+  fread(&gameState.sizeOfTheBoard, sizeof(int), 1, f);
+  fread(&gameState.difficulty, sizeof(int), 1, f);
+  fread(&gameState.hearts, sizeof(int), 1, f);
+  fread(&gameState.correctMoves, sizeof(int), 1, f);
+  gameState.boxSize = sqrt(gameState.sizeOfTheBoard); // updating box size
 
   int **grid = initializeBoard(); // initializing the board with 0s
 
-  for (int i = 0; i < sizeOfTheBoard; i++) {
-    fread(grid[i], sizeof(int), sizeOfTheBoard, f); //writing the data to the board
+  for (int i = 0; i < gameState.sizeOfTheBoard; i++) {
+    fread(grid[i], sizeof(int), gameState.sizeOfTheBoard, f); //writing the data to the board
   }
 
   fclose(f);
   return grid;
-}
-
-
-// functions to calculate time of the game :)
-time_t start, end;
-
-void startTime(){
-  time(&start);
-  printf("GAME STARTED AT: %s", ctime(&start));
-}
-
-void endTime(){
-  time(&end);
-  printf("GAME ENDED AT: %s", ctime(&end));
-}
-
-void calculateTimeElapsed(){
-  const double elapsed = difftime(end, start);
-  printf("ELAPSED TIME: %.0f seconds\n", elapsed);
-}
-
-void tutorial(){
-  printf("\n\nSudoku is a logic-based number placement puzzle. "
-    "The goal is to fill a nxn grid with numbers 1 through 9, "
-    "ensuring that each number appears only once in every row, column, and (usually) a 3x3 subgrid. \n\n");
-  printf("BASIC RULES FOR A 9X9 BOARD:\n");
-  printf("  1. Grid: The puzzle consists of a 9x9 grid divided into 9 nonets (3x3 subgrids).\n");
-  printf("  2. The numbers 1 through 9 must be placed in each row, column, and nonet.\n");
-  printf("  3. Each number can only appear once in each row, column, and nonet.\n");
-  printf("  4. A Sudoku puzzle will have some numbers pre-filled in the grid, providing a starting point. \n\n\n");
 }
 
 
@@ -519,7 +529,11 @@ void menu() {
     printf("3] Continue\n");
     printf("4] Exit\n");
 
-    scanf("%d", &choice);
+    if (scanf("%d", &choice) != 1) {
+      printf("INVALID INPUT.\n");
+      while (getchar() != '\n'); // flush input
+      continue;
+    }
 
     switch (choice) {
       case 1:
@@ -527,16 +541,17 @@ void menu() {
         system("pause");
         break;
       case 2:
-        correctMoves = 0;
-        hearts = 3;
+        freeBoard();
+        gameState.correctMoves = 0;
+        gameState.hearts = 3;
 
         boardSize();
 
-        if (sizeOfTheBoard == 0) break;  // if something went wrong with choosing size go -> back to menu
+        if (gameState.sizeOfTheBoard == 0) break;  // if something went wrong with choosing size go -> back to menu
 
         gameDifficulty();
 
-        if (difficulty == 0) break; // the same
+        if (gameState.difficulty == 0) break; // the same
 
         // changes the “seed” or the starting point of the algorithm. A seed is an integer used to initialize the random number generator.
         // ensure a different sequence of random numbers; ergo a different sudoku puzzle every time
@@ -544,34 +559,35 @@ void menu() {
         startTime();
         printf("\n");
 
-        board = sudokuGenerator();
+        gameState.board = sudokuGenerator();
 
-        printBoard(sizeOfTheBoard);
+        printBoard();
 
-        insertValueToGrid(board);
+        makeMove(gameState.board);
 
         printf("\n");
         endTime();
-        printf("\nGAME WON!\n\n");
         calculateTimeElapsed();
         system("pause");
-        menu();
+        break;
       case 3:
-        board = loadGameFromFile();
-        if (board != NULL) {
-          printBoard(sizeOfTheBoard);
+        freeBoard();
+        gameState.board = loadGameFromFile();
+
+        if (gameState.board != NULL) {
+          printBoard();
           startTime();
-          insertValueToGrid(board);
+          makeMove(gameState.board);
 
           printf("\n");
           endTime();
-          printf("\nGAME WON!\n\n");
           calculateTimeElapsed();
           system("pause");
-          menu();
+          break;
         }
         break;
       case 4:
+        freeBoard();
         printf("CLOSING APP...\n");
         exit(0);
       default:
@@ -582,16 +598,8 @@ void menu() {
 }
 
 
-
 int main(){
   menu();
-
-  if (board != NULL) {
-    for (int i = 0; i < sizeOfTheBoard; i++) {
-      free(board[i]);
-    }
-    free(board);
-  }
 
   return 0;
 }
