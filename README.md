@@ -22,6 +22,9 @@ note: this is my first 'bigger' project in c so there's bound to be (a lot of) m
 </pre>
 ## GAME PREVIEW
 ![image](https://github.com/user-attachments/assets/4505b6ac-0c50-4854-b160-379e4a9abb35)
+##
+![image](https://github.com/user-attachments/assets/291ac2e0-239f-4000-954f-f4e9fc3cd654)
+
 
 ## PROBLEMS I HAD
 - the board for 4x4 hard difficulty sometimes doesn't generate at all BUT ONLY SOMETIMES??? i have no idea why.
