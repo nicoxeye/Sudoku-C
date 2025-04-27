@@ -21,13 +21,13 @@ note: this is my first 'bigger' project in c so there's bound to be (a lot of) m
       safe exit from the app
 </pre>
 ## GAME PREVIEW
-![image](https://github.com/user-attachments/assets/16be0418-4584-46f5-b8cd-4bec36925415)
+![image](https://github.com/user-attachments/assets/4505b6ac-0c50-4854-b160-379e4a9abb35)
 
 ## PROBLEMS I HAD
-- the board for 4x4 advanced sometimes doesn't generate at all BUT ONLY SOMETIMES??? i have no idea why.
+- the board for 4x4 hard difficulty sometimes doesn't generate at all BUT ONLY SOMETIMES??? i have no idea why.
 - my guess it has something to do with the removing of the cells but i've changed how it works over 4 times and it's still the same so i give up on that
-- for the user to type in A-F in 16x16 board,, i hate ASCII with a passion
-- HEADER FILES! creating my own didn't work for soooo long on clion:') i've switched to vscode in the end... and made one for some utils but i'm scared to do more in case it stops working
+- for the user to type in A-F in 16x16 board,, i hate ASCII with a passion<3
+- HEADER FILES! creating my own didn't work for soooo long on clion:') i've switched to vscode in the end and divided the code :D
 
 ##
 
