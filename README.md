@@ -9,7 +9,7 @@ note: this is my first 'bigger' project in c so there's bound to be (a lot of) m
     1. tutorial: quick text about the sudoku game as a whole
     2. new game:
       - menu for choosing size of the board; 4x4, 9x9, 16x16
-      - menu for choosing difficulty; easy, moderate, hard, advanced
+      - menu for choosing difficulty; easy, moderate, hard
       - next the sudoku board is generated using an algorythm
       - user has to type in: row, column and value to solve the given board
       - user has 3 hearts (lives, mistakes), -1 for every wrongly placed value on the board, 0 = game over
